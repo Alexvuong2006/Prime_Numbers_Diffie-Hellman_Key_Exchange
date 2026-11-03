@@ -38,7 +38,7 @@
 
    ```
    24120070-24120089-24120091.zip
-   ├── project_01_source/   (mã nguồn)
+   ├── project_01_source/   (*.cpp — CHỈ được nộp file .cpp, không .h/.c/Makefile)
    └── project_01_report/   (*.pdf)
    ```
 
@@ -52,20 +52,21 @@ Thư mục `prng_sample` gồm:
 
 | File | Nội dung | Nhóm dùng như thế nào |
 |---|---|---|
-| `lib/fips202/fips202.c/.h` | Cài đặt Keccak/SHA-3, SHAKE128/256 (bản tham chiếu của Kyber, public domain) | **Giữ nguyên**, dùng làm lõi PRNG |
-| `lib/fips202/prng.cpp/.h` | PRNG dựa trên SHAKE128 (XOF): `prng_seed`, `prng_next_u16/u32/u64`, `randombytes` (lấy entropy từ OS) | Dùng làm nguồn ngẫu nhiên duy nhất cho `random_bits`, Miller-Rabin, khóa riêng |
-| `src/u512_sample.h` | Gợi ý kiểu `uint512_t` = `uint64_t digits[8]` (little-endian, dùng `__uint128_t` cho tích trung gian) | Làm cơ sở thiết kế kiểu số lớn của nhóm (mở rộng 1024/2048 bit) |
+| `lib/fips202/fips202.c/.h` | Cài đặt Keccak/SHA-3, SHAKE128/256 (bản tham chiếu của Kyber, public domain) | Giữ nguyên thuật toán, **gộp `.h` + `.c` thành `fips202.cpp`**, dùng làm lõi PRNG |
+| `lib/fips202/prng.cpp/.h` | PRNG dựa trên SHAKE128 (XOF): `prng_seed`, `prng_next_u16/u32/u64`, `randombytes` (lấy entropy từ OS) | **Gộp `.h` vào `prng.cpp`**; nguồn ngẫu nhiên duy nhất cho `random_bits`, Miller-Rabin, khóa riêng |
+| `src/u512_sample.h` | Gợi ý kiểu `uint512_t` = `uint64_t digits[8]` (little-endian, dùng `__uint128_t` cho tích trung gian) | Làm cơ sở thiết kế kiểu số lớn của nhóm (mở rộng 1024/2048 bit), viết trong `bigint.cpp` |
 | `src/dh_sample.h` | Chữ ký gợi ý: `modular_exponentiation`, `generate_safe_prime(prng_ctx*, size_t bitsize = 512)`, `generate_private_key(prng_ctx*, const uint512_t&)` | Nhóm **theo đúng chữ ký này** (truyền `prng_ctx*`) |
-| `src/main_prng.cpp`, `Makefile` | Ví dụ seed + sinh số ngẫu nhiên | Tham khảo cách build |
+| `src/main_prng.cpp`, `Makefile` | Ví dụ seed + sinh số ngẫu nhiên | Chỉ tham khảo; bài nộp **không dùng Makefile** mà build bằng 1 lệnh `g++` |
 
 **Các vấn đề phát hiện trong code mẫu cần xử lý:**
 
-1. `randombytes()` dùng `getrandom()` + `<sys/random.h>` → **chỉ chạy trên Linux/macOS**, không biên dịch được trên Windows. Cần port bằng `#ifdef _WIN32` (dùng `BCryptGenRandom` + link `-lbcrypt`, hoặc `rand_s`) và giữ nguyên nhánh Linux.
+1. `randombytes()` dùng `getrandom()` + `<sys/random.h>` → **chỉ chạy trên Linux/macOS**, không biên dịch được trên Windows. Cần port bằng `#ifdef _WIN32` — ưu tiên **`rand_s`** (định nghĩa `_CRT_RAND_S` ở **dòng đầu tiên của `main.cpp`**, trước mọi `#include`) để không phải link thêm thư viện; giữ nguyên nhánh `getrandom` cho Linux/macOS.
 2. Tham số `uint8_t outlen` trong `randombytes` → chỉ lấy tối đa 255 byte mỗi lần gọi; nên đổi thành `size_t`.
 3. `prng_next_u32`: `buf[3] << 24` dịch trên `int` → có thể tràn bit dấu (hành vi không xác định trong C++14); cần ép kiểu `(uint32_t)buf[3] << 24` trước khi dịch.
 4. `main_prng.cpp`: `memcpy(seed, "seed", sizeof("seed"))` chỉ ghi 5/32 byte, phần còn lại **chưa khởi tạo** → seed không xác định. Chương trình của nhóm phải: (a) mặc định seed bằng `randombytes()` (entropy OS), (b) có tùy chọn **seed cố định** để debug/tái lập kết quả (đề mẫu cho phép dùng seed cố định trong lab).
 5. `__uint128_t` là phần mở rộng của **GCC/Clang**, MSVC không hỗ trợ → cả nhóm dùng **g++** (Windows: MSYS2/MinGW-w64 UCRT64 hoặc WSL).
-6. `Makefile` mẫu có `-lntl -lgf2x -lgmp` (NTL/GMP) → **tuyệt đối không dùng** các thư viện này (vi phạm yêu cầu tự cài đặt); Makefile mẫu cũng chưa có `-std=c++14` → nhóm phải thêm.
+6. `Makefile` mẫu có `-lntl -lgf2x -lgmp` (NTL/GMP) → **tuyệt đối không dùng** các thư viện này (vi phạm yêu cầu tự cài đặt); Makefile mẫu cũng chưa có `-std=c++14`.
+7. Mẫu chia thành `.h` + `.c` + `.cpp`, nhưng bài nộp **chỉ được chứa `.cpp`** → toàn bộ code phải tổ chức lại theo mục 3 (không còn file header).
 
 ---
 
@@ -74,7 +75,7 @@ Thư mục `prng_sample` gồm:
 Phát triển theo hướng gợi ý của `u512_sample.h`: **số nguyên không âm, độ rộng cố định**, mảng limb `uint64_t` little-endian, tích trung gian dùng `__uint128_t`.
 
 ```cpp
-// ===== bigint.h =====
+// ===== bigint.cpp =====
 #define uint128_t __uint128_t
 
 template <size_t N>                 // N limb 64-bit
@@ -95,12 +96,12 @@ typedef uint_t<2 * MAX_PRIME_BITS / 64> big_t;
 // Số học:    +, - (giả định a >= b), *, <<, >>
 // Chia:      divmod(a, b, q, r), /, %, mod_small(a, m)   (mod_small dùng cho sàng)
 
-// ===== prng.h (từ mẫu, đã port) =====
+// ===== prng.cpp (từ mẫu, đã gộp header + port) =====
 void randombytes(uint8_t *out, size_t outlen);
 void prng_seed(prng_ctx *ctx, const uint8_t *seed, size_t seedlen);
 uint64_t prng_next_u64(prng_ctx *ctx);  // ...
 
-// ===== dh.h (theo dh_sample.h) =====
+// ===== prime.cpp (Minh) & dh.cpp (Mạnh) — chữ ký theo dh_sample.h =====
 big_t random_bits(prng_ctx *ctx, size_t bits);                           // đúng 'bits' bit, bit cao nhất = 1
 big_t random_range(prng_ctx *ctx, const big_t &lo, const big_t &hi);     // phân phối đều trong [lo, hi]
 bool  is_probable_prime(prng_ctx *ctx, const big_t &n, int rounds);      // Miller-Rabin
@@ -110,34 +111,42 @@ big_t generate_private_key(prng_ctx *ctx, const big_t &p);               // tron
 big_t choose_generator(const big_t &p);                                  // chọn g phù hợp với safe prime p
 ```
 
-**Cấu trúc thư mục** (mỗi người sở hữu file riêng → hạn chế conflict):
+**Tổ chức mã nguồn khi chỉ được nộp `.cpp` — “unity build”:**
+
+- Mỗi mảng code nằm trong **một file `.cpp` riêng** (mỗi người sở hữu file của mình → hạn chế conflict), **không có file `.h`**.
+- Mỗi file có include guard (`#ifndef BIGINT_CPP` / `#define BIGINT_CPP` / `#endif`) và tự `#include` các header **chuẩn** nó cần.
+- `main.cpp` `#include` các file `.cpp` còn lại **theo đúng thứ tự phụ thuộc**, nên chỉ cần biên dịch **một file `main.cpp`**. Các file khác **không** đưa vào lệnh biên dịch (tránh lỗi trùng định nghĩa).
 
 ```
-project_01_source/
-├── Makefile                 # Khang
-├── lib/fips202/
-│   ├── fips202.c, fips202.h # giữ nguyên từ mẫu
-│   └── prng.cpp, prng.h     # Minh (port Windows + sửa lỗi)
-├── src/
-│   ├── bigint.h             # Khang (phần cơ bản) + Mạnh (khu vực chia/mod)
-│   ├── prime.cpp            # Minh: random_bits, random_range, Miller-Rabin, safe prime, private key
-│   ├── dh.cpp               # Mạnh: modular_exponentiation, choose_generator
-│   ├── dh.h                 # khai báo chung (theo dh_sample.h)
-│   └── main.cpp             # Mạnh: luồng Diffie-Hellman; Khang: tham số dòng lệnh
-└── tests/                   # Mạnh: unit test, script đối chiếu Python (không nộp)
+project_01_source/           # đúng cấu trúc nộp bài, chỉ chứa .cpp
+├── fips202.cpp              # Minh: gộp fips202.h + fips202.c của mẫu (giữ nguyên thuật toán)
+├── prng.cpp                 # Minh: gộp prng.h + prng.cpp của mẫu, port Windows, sửa lỗi
+├── bigint.cpp               # Khang (phần cơ bản) + Mạnh (khu vực chia/mod)
+├── prime.cpp                # Minh: random_bits, random_range, Miller-Rabin, safe prime, private key
+├── dh.cpp                   # Mạnh: modular_exponentiation, choose_generator
+└── main.cpp                 # Mạnh: luồng Diffie-Hellman; Khang: tham số dòng lệnh, thứ tự #include
+tests/                       # Mạnh: unit test (.cpp), script đối chiếu Python — KHÔNG nộp
+docs/                        # bản nháp từng mục báo cáo — KHÔNG nộp
 project_01_report/
 └── report.pdf
-docs/                        # bản nháp từng mục báo cáo
 ```
 
-> Đề ghi `project_01_source/*.cpp`. Khang sẽ hỏi lại giảng viên việc nộp kèm `.h`/`.c`/`Makefile`; nếu chỉ được nộp `.cpp`, trước khi nộp sẽ gộp header vào các file `.cpp` (đổi `fips202.c` → `fips202.cpp`).
+Thứ tự `#include` trong `main.cpp`:
 
-**Lệnh biên dịch chuẩn** (chạy tại `project_01_source/`):
+```cpp
+#define _CRT_RAND_S          // phải đứng trước mọi #include (dùng rand_s trên Windows)
+#include "fips202.cpp"
+#include "prng.cpp"
+#include "bigint.cpp"
+#include "dh.cpp"            // modular_exponentiation (prime.cpp cần dùng cho Miller-Rabin)
+#include "prime.cpp"
+// ... main()
+```
+
+**Lệnh biên dịch chuẩn** (chạy tại `project_01_source/`, giống nhau trên Windows/Linux):
 
 ```bash
-g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
-    src/main.cpp src/prime.cpp src/dh.cpp lib/fips202/prng.cpp lib/fips202/fips202.c \
-    -o dh            # Windows thêm: -lbcrypt
+g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 ./dh
 ```
 
@@ -149,8 +158,8 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 **Mảng chính: Kiểu số lớn (phần cơ bản) + build/tích hợp + hoàn thiện bài nộp**
 
 **Lập trình**
-- [ ] Khởi tạo cấu trúc repo theo mục 3, chép `fips202`/`prng` từ mẫu, viết `Makefile` (có `-std=c++14`, bỏ NTL/GMP, hỗ trợ cả Windows/Linux), `.gitignore`.
-- [ ] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.h`:
+- [ ] Khởi tạo cấu trúc repo theo mục 3: tạo khung các file `.cpp` (include guard, khu vực của từng người), `main.cpp` với thứ tự `#include`, `.gitignore`; đảm bảo khung build được bằng đúng 1 lệnh `g++ ... main.cpp`.
+- [ ] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.cpp`:
   - Constructor, `from_u64`, `from_hex`, `to_hex`, `to_dec`.
   - `is_zero`, `is_odd`, `bit_length`, `test_bit`.
   - So sánh `==, !=, <, <=, >, >=`.
@@ -165,7 +174,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 - [ ] Gộp báo cáo thành 1 PDF (bìa, mục lục, bảng phân công & mức độ hoàn thành, tài liệu tham khảo).
 
 **Hoàn thiện bài nộp**
-- [ ] Hỏi giảng viên về định dạng file trong `project_01_source` (xem mục 3).
+- [ ] Rà soát `project_01_source/` **chỉ chứa file `.cpp`** (không `.h`, `.c`, `.exe`, Makefile, file test).
 - [ ] Đóng gói `24120070-24120089-24120091.zip`, giải nén thử và build lại từ đầu trước khi nộp.
 
 ---
@@ -174,7 +183,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 **Mảng chính: PRNG + Kiểm tra nguyên tố + Sinh số nguyên tố an toàn + Sinh khóa riêng (Nhiệm vụ B, C)**
 
 **Lập trình**
-- [ ] **Hoàn thiện PRNG từ mẫu** (`prng.cpp/.h`): sửa các lỗi 1–4 ở mục 2 (port `randombytes` sang Windows bằng `BCryptGenRandom`, `outlen` → `size_t`, ép kiểu trước khi dịch bit, khởi tạo seed đủ 32 byte từ `randombytes`).
+- [ ] **Hoàn thiện PRNG từ mẫu**: gộp `fips202.h` + `fips202.c` → `fips202.cpp`, `prng.h` + `prng.cpp` → `prng.cpp` (không còn header); sửa các lỗi 1–4 ở mục 2 (port `randombytes` sang Windows bằng `rand_s`, `outlen` → `size_t`, ép kiểu trước khi dịch bit, khởi tạo seed đủ 32 byte từ `randombytes`).
 - [ ] **`random_bits(ctx, bits)`**: ghép các `prng_next_u64` thành số đúng `bits` bit (bật bit cao nhất; với ứng viên nguyên tố bật thêm bit thấp nhất).
 - [ ] **`random_range(ctx, lo, hi)`**: **rejection sampling** để phân phối đều (không dùng `% n` gây lệch).
 - [ ] **`is_probable_prime` (Miller-Rabin)**: `n-1 = 2^s · d`, cơ sở ngẫu nhiên trong `[2, n-2]`, số vòng cấu hình được (mặc định 40); xử lý `n < 4`, số chẵn. Viết & test trước trên `uint64_t` trong lúc chờ phép chia số lớn.
@@ -185,7 +194,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 
 **Báo cáo**
 - [ ] **Mục 2 – Kiểm tra số nguyên tố**: chia thử, Fermat (số Carmichael), Miller-Rabin (cơ sở lý thuyết, xác suất sai ≤ 4^(-k)), Solovay-Strassen, AKS (giới thiệu); safe prime/Sophie Germain prime và lý do dùng trong DH; mô tả cài đặt của nhóm.
-- [ ] **Mục 3 – Số ngẫu nhiên (điểm cộng)**: TRNG/PRNG/CSPRNG; nguồn entropy của OS (`getrandom`, `BCryptGenRandom`); **SHAKE128/Keccak sponge – vì sao một XOF dùng được làm CSPRNG** (theo thư viện mẫu); vai trò của seed và vì sao seed cố định chỉ dùng để debug; sự cố thực tế do ngẫu nhiên yếu (vd. Debian OpenSSL 2008); vì sao không dùng `rand()`/`std::mt19937`.
+- [ ] **Mục 3 – Số ngẫu nhiên (điểm cộng)**: TRNG/PRNG/CSPRNG; nguồn entropy của OS (`getrandom`, `rand_s`/`RtlGenRandom`, `BCryptGenRandom`); **SHAKE128/Keccak sponge – vì sao một XOF dùng được làm CSPRNG** (theo thư viện mẫu); vai trò của seed và vì sao seed cố định chỉ dùng để debug; sự cố thực tế do ngẫu nhiên yếu (vd. Debian OpenSSL 2008); vì sao không dùng `rand()`/`std::mt19937`.
 
 ---
 
@@ -193,7 +202,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 **Mảng chính: Chia/mod số lớn + Lũy thừa mô-đun + Giao thức Diffie-Hellman + Kiểm thử (Nhiệm vụ A, D)**
 
 **Lập trình**
-- [ ] **Phép chia & mod cho `uint_t<N>`** (khu vực riêng trong `bigint.h`): `divmod`, `/`, `%`. Làm trước bản chia nhị phân (shift-subtract) để có kết quả đúng sớm, sau đó tối ưu bằng **Knuth Algorithm D** (chia theo limb 64-bit với `uint128_t`).
+- [ ] **Phép chia & mod cho `uint_t<N>`** (khu vực riêng trong `bigint.cpp`): `divmod`, `/`, `%`. Làm trước bản chia nhị phân (shift-subtract) để có kết quả đúng sớm, sau đó tối ưu bằng **Knuth Algorithm D** (chia theo limb 64-bit với `uint128_t`).
 - [ ] **`modular_exponentiation`**: **square-and-multiply** duyệt bit số mũ, giảm mod sau mỗi phép nhân; xử lý `mod = 1`, `exp = 0`. *(Nâng cao nếu kịp: Montgomery multiplication / sliding window.)*
 - [ ] **`choose_generator(p)`**: với `p = 2q + 1`, các bậc phần tử chỉ có thể là 1, 2, q, 2q → chọn `g` sao cho `g ≠ ±1` và kiểm tra `g^q mod p` để biết `g` sinh nhóm con bậc `q` (thặng dư bậc hai) hay cả nhóm bậc `2q`; trình bày lựa chọn của nhóm và lý do (vd. dùng nhóm con bậc `q` để tránh rò rỉ 1 bit qua ký hiệu Legendre).
 - [ ] **`main.cpp` – luồng Diffie-Hellman**: seed PRNG → sinh `p`, `g` → khóa riêng `a`, `b` → `A`, `B` → bí mật chung hai phía → in kết quả (hex), xác minh trùng khớp, in thời gian từng bước.
@@ -220,7 +229,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 
 | Hạng mục | Khang (24120070) | Minh (24120091) | Mạnh (24120089) |
 |---|:---:|:---:|:---:|
-| Cấu trúc repo, Makefile, tích hợp | **Chính** | | |
+| Cấu trúc repo, khung unity build, tích hợp | **Chính** | | |
 | Số lớn: biểu diễn, I/O, so sánh, +, -, *, shift | **Chính** | | Review |
 | Số lớn: chia, mod | Review | | **Chính** |
 | PRNG (port từ mẫu, `random_bits`, `random_range`) | Review | **Chính** | |
@@ -243,7 +252,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 
 | Thời gian | Khang | Minh | Mạnh | Mốc kiểm tra |
 |---|---|---|---|---|
-| **T4 04/11 – T5 05/11** | Thống nhất API, tạo khung repo + Makefile | Port PRNG sang Windows, sửa lỗi mẫu | Cài môi trường g++, chuẩn bị bộ test Python | Khung project build & chạy được PRNG |
+| **T4 04/11 – T5 05/11** | Thống nhất API, tạo khung repo (các file `.cpp` + `main.cpp`) | Gộp & port PRNG sang Windows, sửa lỗi mẫu | Cài môi trường g++, chuẩn bị bộ test Python | Khung project build & chạy được PRNG |
 | **T6 06/11 – CN 08/11** | So sánh, +, -, shift (**xong 06/11**), nhân, I/O | `random_bits`, `random_range`; Miller-Rabin trên `uint64_t` | Chia shift-subtract, `%`; unit test số lớn | |
 | **T2 09/11** | Hoàn thiện & sửa lỗi số lớn | Chuyển Miller-Rabin sang `big_t` | Hoàn thiện chia/mod | **Mốc 1:** số lớn đủ phép toán, qua unit test |
 | **T3 10/11 – T5 12/11** | Tích hợp, tham số CLI | Sàng, `generate_safe_prime`, `generate_private_key` | `modular_exponentiation`, tối ưu chia (Knuth D) | **Mốc 2 (12/11):** sinh được safe prime 512 bit |
@@ -277,3 +286,4 @@ g++ -std=c++14 -O2 -Wall -Wextra -I src -I lib/fips202 \
 - [ ] Bí mật chung của Alice và Bob trùng khớp qua nhiều lần chạy.
 - [ ] Báo cáo PDF đủ 6 mục theo đề, có bảng phân công & mức độ hoàn thành, tài liệu tham khảo.
 - [ ] File nộp đúng tên và cấu trúc thư mục, nộp trước 17/11/2026.
+
