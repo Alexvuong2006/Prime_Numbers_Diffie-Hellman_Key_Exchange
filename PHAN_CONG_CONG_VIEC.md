@@ -158,15 +158,15 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 **Mảng chính: Kiểu số lớn (phần cơ bản) + build/tích hợp + hoàn thiện bài nộp**
 
 **Lập trình**
-- [ ] Khởi tạo cấu trúc repo theo mục 3: tạo khung các file `.cpp` (include guard, khu vực của từng người), `main.cpp` với thứ tự `#include`, `.gitignore`; đảm bảo khung build được bằng đúng 1 lệnh `g++ ... main.cpp`.
-- [ ] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.cpp`:
+- [x] Khởi tạo cấu trúc repo theo mục 3: tạo khung các file `.cpp` (include guard, khu vực của từng người), `main.cpp` với thứ tự `#include`, `.gitignore`; đảm bảo khung build được bằng đúng 1 lệnh `g++ ... main.cpp`.
+- [x] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.cpp` (Đã hoàn thành và kiểm thử unit test thành công 100%):
   - Constructor, `from_u64`, `from_hex`, `to_hex`, `to_dec`.
-  - `is_zero`, `is_odd`, `bit_length`, `test_bit`.
+  - `is_zero`, `is_odd`, `bit_length`, `test_bit`, `set_bit`.
   - So sánh `==, !=, <, <=, >, >=`.
   - Cộng/trừ có nhớ (dùng `uint128_t`), nhân schoolbook O(n²) có cắt theo số limb thực dùng, dịch bit `<<`, `>>`, `mod_small`.
-  - **Ưu tiên bàn giao so sánh, +, -, dịch bit trước 06/11** để Mạnh viết phép chia.
+  - **Đã bàn giao lõi số lớn cho Mạnh & Minh** (vượt tiến độ trước mốc 06/11).
 - [ ] Tích hợp code của Minh và Mạnh; đảm bảo build sạch warning trên cả Windows (MSYS2) và Linux/WSL.
-- [ ] Tham số dòng lệnh: `--bits <n>`, `--rounds <k>`, `--seed <hex>` (seed cố định để debug).
+- [x] Tham số dòng lệnh: `--bits <n>`, `--rounds <k>`, `--seed <hex>` (đã tích hợp đầy đủ trong `main.cpp`).
 
 **Báo cáo**
 - [ ] **Mục 1 – Hệ thống xử lý số lớn**: biểu diễn limb 64-bit, vì sao chọn độ rộng cố định gấp đôi `MAX_PRIME_BITS`, thuật toán và độ phức tạp của từng toán tử (phần chia/mod và lũy thừa mô-đun do Mạnh viết).
