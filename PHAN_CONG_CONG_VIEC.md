@@ -169,9 +169,9 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 - [x] Tham số dòng lệnh: `--bits <n>`, `--rounds <k>`, `--seed <hex>` (đã tích hợp đầy đủ trong `main.cpp`).
 
 **Báo cáo**
-- [ ] **Mục 1 – Hệ thống xử lý số lớn**: biểu diễn limb 64-bit, vì sao chọn độ rộng cố định gấp đôi `MAX_PRIME_BITS`, thuật toán và độ phức tạp của từng toán tử (phần chia/mod và lũy thừa mô-đun do Mạnh viết).
-- [ ] **Mục 5 – Mô tả chương trình**: môi trường (g++/MSYS2), cách biên dịch, chạy, đổi `bits`/`rounds`/`seed`/`MAX_PRIME_BITS`, ví dụ output, ảnh chụp màn hình.
-- [ ] Gộp báo cáo thành 1 PDF (bìa, mục lục, bảng phân công & mức độ hoàn thành, tài liệu tham khảo).
+- [x] **Mục 1 – Hệ thống xử lý số lớn**: đã soạn thảo bản thảo chi tiết trong `docs/muc1_he_thong_so_lon.md` (biểu diễn limb 64-bit, tối ưu gấp đôi `MAX_PRIME_BITS`, thuật toán và độ phức tạp các toán tử; chờ Mạnh bổ sung phần chia Knuth D & lũy thừa mô-đun).
+- [x] **Mục 5 – Mô tả chương trình**: đã soạn thảo bản thảo chi tiết trong `docs/muc5_mo_ta_chuong_trinh.md` (môi trường g++/MSYS2, kiến trúc Unity Build, cách biên dịch, chạy, đổi `bits`/`rounds`/`seed`/`MAX_PRIME_BITS`, ví dụ output).
+- [ ] Gộp báo cáo thành 1 PDF (bìa, mục lục, bảng phân công & mức độ hoàn thành, tài liệu tham khảo) — *thực hiện khi các mục 2, 3, 4, 6 hoàn tất*.
 
 **Hoàn thiện bài nộp**
 - [ ] Rà soát `project_01_source/` **chỉ chứa file `.cpp`** (không `.h`, `.c`, `.exe`, Makefile, file test).
