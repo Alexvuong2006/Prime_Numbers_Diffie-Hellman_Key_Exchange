@@ -1,0 +1,36 @@
+# Binaries and executables
+*.exe
+*.out
+*.app
+dh
+t.exe
+
+# Object files & archives
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+
+# Build directories
+bin/
+build/
+bin/build/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Submission archives (avoid committing zip directly)
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary scratch
+scratch/
+tmp/
