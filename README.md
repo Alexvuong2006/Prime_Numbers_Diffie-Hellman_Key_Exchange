@@ -100,8 +100,12 @@ Prime_Numbers_Diffie-Hellman_Key_Exchange/
 ├── docs/                           # Bản thảo các mục báo cáo (Mục 1 - 6) trước khi đóng gói PDF
 │   └── README.md
 │
-└── tests/                          # Bộ kiểm thử đơn vị (Unit Tests) & script Python kiểm chứng
-    └── README.md
+├── tests/                          # Bộ kiểm thử (KHÔNG nộp)
+│   ├── test_bigint.cpp             # Unit test số lớn
+│   ├── crosscheck_bigint.cpp/.py   # Đối chiếu 30.000 phép tính BigInt với Python
+│   └── README.md
+│
+└── project_01_report/              # Chứa report.pdf khi hoàn thành (nộp cùng project_01_source)
 ```
 
 ---

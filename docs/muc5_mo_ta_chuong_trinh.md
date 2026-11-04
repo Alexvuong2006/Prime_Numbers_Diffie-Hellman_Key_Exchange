@@ -119,7 +119,9 @@ Nếu muốn thay đổi cố định các giá trị mặc định trực tiế
 
 ## 5.6. Minh họa kết quả chạy thực tế (Terminal Output)
 
-Dưới đây là output mẫu thực tế khi thực thi chương trình:
+> ⚠️ **Lưu ý (cập nhật trước khi nộp):** output dưới đây chỉ là **minh họa định dạng**; các giá trị hex và thời gian là giả định. Khi Minh và Mạnh hoàn thiện `prime.cpp`/`dh.cpp`, Khang sẽ chạy thật rồi thay bằng output và ảnh chụp màn hình thật.
+
+Output minh họa khi thực thi chương trình:
 
 ```text
 ===============================================================

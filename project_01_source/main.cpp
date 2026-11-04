@@ -19,6 +19,7 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include <cctype>
 
 // Các thành phần của chương trình (theo thứ tự phụ thuộc)
 #include "fips202.cpp"
@@ -51,12 +52,31 @@ int main(int argc, char *argv[])
             print_usage(argv[0]);
             return 0;
         } else if (arg == "--bits" && i + 1 < argc) {
-            bit_size = static_cast<size_t>(std::strtoul(argv[++i], nullptr, 10));
+            char *end = nullptr;
+            unsigned long v = std::strtoul(argv[++i], &end, 10);
+            if (end == argv[i] || *end != '\0' || v == 0) {
+                std::cerr << "Loi: --bits phai la so nguyen duong.\n";
+                return 1;
+            }
+            bit_size = static_cast<size_t>(v);
         } else if (arg == "--rounds" && i + 1 < argc) {
-            rounds = std::atoi(argv[++i]);
+            char *end = nullptr;
+            long v = std::strtol(argv[++i], &end, 10);
+            if (end == argv[i] || *end != '\0' || v < 1 || v > 1000) {
+                std::cerr << "Loi: --rounds phai nam trong khoang [1, 1000].\n";
+                return 1;
+            }
+            rounds = static_cast<int>(v);
         } else if (arg == "--seed" && i + 1 < argc) {
             fixed_seed_hex = argv[++i];
             use_fixed_seed = true;
+            bool ok = (fixed_seed_hex.length() == 64);
+            for (size_t k = 0; ok && k < fixed_seed_hex.length(); k++)
+                ok = std::isxdigit(static_cast<unsigned char>(fixed_seed_hex[k])) != 0;
+            if (!ok) {
+                std::cerr << "Loi: --seed phai la chuoi hex dung 64 ky tu (32 byte).\n";
+                return 1;
+            }
         } else {
             std::cerr << "Loi: Tham so khong hop le: " << arg << "\n";
             print_usage(argv[0]);
@@ -101,7 +121,10 @@ int main(int argc, char *argv[])
         // Tam thoi khoi tao seed bang rand_s neu randombytes chua hoan thien
         for (size_t i = 0; i < sizeof(seed); i += sizeof(unsigned int)) {
             unsigned int r = 0;
-            rand_s(&r);
+            if (rand_s(&r) != 0) {
+                std::cerr << "Loi: rand_s() that bai, khong lay duoc entropy tu he dieu hanh.\n";
+                return 1;
+            }
             std::memcpy(seed + i, &r, sizeof(r));
         }
         #else

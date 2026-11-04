@@ -3,7 +3,6 @@
 *.out
 *.app
 dh
-t.exe
 
 # Object files & archives
 *.o

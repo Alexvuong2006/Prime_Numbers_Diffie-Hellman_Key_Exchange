@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string>
 
 __extension__ typedef unsigned __int128 uint128_t;

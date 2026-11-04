@@ -159,7 +159,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 
 **Lập trình**
 - [x] Khởi tạo cấu trúc repo theo mục 3: tạo khung các file `.cpp` (include guard, khu vực của từng người), `main.cpp` với thứ tự `#include`, `.gitignore`; đảm bảo khung build được bằng đúng 1 lệnh `g++ ... main.cpp`.
-- [x] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.cpp` (Đã hoàn thành và kiểm thử unit test thành công 100%):
+- [x] Cài đặt `uint_t<N>` phần cơ bản trong `bigint.cpp` (đã qua unit test và **đối chiếu 30.000 phép tính ngẫu nhiên với Python, 0 sai lệch** — xem `tests/crosscheck_bigint.*`):
   - Constructor, `from_u64`, `from_hex`, `to_hex`, `to_dec`.
   - `is_zero`, `is_odd`, `bit_length`, `test_bit`, `set_bit`.
   - So sánh `==, !=, <, <=, >, >=`.
@@ -167,6 +167,8 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
   - **Đã bàn giao lõi số lớn cho Mạnh & Minh** (vượt tiến độ trước mốc 06/11).
 - [ ] Tích hợp code của Minh và Mạnh; đảm bảo build sạch warning trên cả Windows (MSYS2) và Linux/WSL.
 - [x] Tham số dòng lệnh: `--bits <n>`, `--rounds <k>`, `--seed <hex>` (đã tích hợp đầy đủ trong `main.cpp`).
+  - Đã kiểm tra đầu vào: `--bits` > 0 và ≤ `MAX_PRIME_BITS`, `--rounds` ∈ [1, 1000], `--seed` đúng 64 ký tự hex.
+- [x] Tạo sẵn thư mục `project_01_report/` (chứa `report.pdf` khi hoàn thành).
 
 **Báo cáo**
 - [x] **Mục 1 – Hệ thống xử lý số lớn**: đã soạn thảo bản thảo chi tiết trong `docs/muc1_he_thong_so_lon.md` (biểu diễn limb 64-bit, tối ưu gấp đôi `MAX_PRIME_BITS`, thuật toán và độ phức tạp các toán tử; chờ Mạnh bổ sung phần chia Knuth D & lũy thừa mô-đun).
@@ -203,6 +205,7 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 
 **Lập trình**
 - [ ] **Phép chia & mod cho `uint_t<N>`** (khu vực riêng trong `bigint.cpp`): `divmod`, `/`, `%`. Làm trước bản chia nhị phân (shift-subtract) để có kết quả đúng sớm, sau đó tối ưu bằng **Knuth Algorithm D** (chia theo limb 64-bit với `uint128_t`).
+  - ⚠️ **Ưu tiên cao:** bản shift-subtract Khang đặt sẵn đo được ≈ 120 µs/phép `mulmod` 512-bit (≈ 90 ms mỗi `modular_exponentiation` 512-bit) — quá chậm để sinh safe prime (cần hàng nghìn lần Miller-Rabin). Knuth D cần nhanh hơn ≥ 10 lần; làm **trước 09/11** vì Minh phụ thuộc vào tốc độ này. Đối chiếu kết quả bằng `tests/crosscheck_bigint.py` (phải giữ 0 sai lệch).
 - [ ] **`modular_exponentiation`**: **square-and-multiply** duyệt bit số mũ, giảm mod sau mỗi phép nhân; xử lý `mod = 1`, `exp = 0`. *(Nâng cao nếu kịp: Montgomery multiplication / sliding window.)*
 - [ ] **`choose_generator(p)`**: với `p = 2q + 1`, các bậc phần tử chỉ có thể là 1, 2, q, 2q → chọn `g` sao cho `g ≠ ±1` và kiểm tra `g^q mod p` để biết `g` sinh nhóm con bậc `q` (thặng dư bậc hai) hay cả nhóm bậc `2q`; trình bày lựa chọn của nhóm và lý do (vd. dùng nhóm con bậc `q` để tránh rò rỉ 1 bit qua ký hiệu Legendre).
 - [ ] **`main.cpp` – luồng Diffie-Hellman**: seed PRNG → sinh `p`, `g` → khóa riêng `a`, `b` → `A`, `B` → bí mật chung hai phía → in kết quả (hex), xác minh trùng khớp, in thời gian từng bước.
