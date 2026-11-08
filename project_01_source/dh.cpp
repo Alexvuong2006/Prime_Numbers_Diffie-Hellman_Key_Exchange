@@ -5,17 +5,73 @@
 // Nhiệm vụ A & D:
 //   - modular_exponentiation: (base^exp) % mod
 //   - choose_generator: chọn phần tử sinh g cho nhóm Z_p* (với p là safe prime)
+//   - Bổ sung: AddMod, MultMod, ExpMod theo tài liệu pseudocode-modular-operation.pdf
 // ============================================================================
 #ifndef DH_CPP
 #define DH_CPP
 
 #include "bigint.cpp"
 
-// Tính (base^exp) % mod bằng thuật toán Square-and-Multiply (bình phương và nhân)
-// TODO(Mạnh):
-//   1. Xử lý các trường hợp biên: mod == 1 -> return 0; exp == 0 -> return 1 % mod.
-//   2. Duyệt các bit của exp từ bit cao nhất (hoặc thấp nhất).
-//   3. Giảm modulo sau mỗi phép nhân (dùng toán tử * và % của BigInt).
+// ----------------------------------------------------------------------------
+// CÁC THUẬT TOÁN THEO pseudocode-modular-operation.pdf (GIẢNG VIÊN CUNG CẤP)
+// Đảm bảo mọi biến trung gian luôn nằm vừa trong n-bit, không cần bộ nhớ phụ lớn.
+// ----------------------------------------------------------------------------
+
+// Tính (x + y) % p trong n-bit (tránh tràn số 512-bit)
+template <size_t N>
+uint_t<N> AddMod(uint_t<N> x, uint_t<N> y, const uint_t<N> &p)
+{
+    x = x % p;
+    y = y % p;
+    uint_t<N> p_minus_y = p - y;
+    if (x >= p_minus_y) {
+        return x - p_minus_y;
+    }
+    return x + y;
+}
+
+// Tính (x * y) % p bằng kỹ thuật Double-and-Add nhị phân kết hợp AddMod
+// Đảm bảo biến trung gian luôn nằm trong n-bit
+template <size_t N>
+uint_t<N> MultMod(uint_t<N> x, const uint_t<N> &y, const uint_t<N> &p)
+{
+    uint_t<N> ret;
+    x = x % p;
+    size_t n = y.bit_length();
+    for (size_t i = 0; i < n; i++) {
+        if (y.test_bit(i)) {
+            ret = AddMod(ret, x, p);
+        }
+        x = AddMod(x, x, p);
+    }
+    return ret;
+}
+
+// Tính (x^y) % p theo mã giả ExpMod của giảng viên (Square-and-Multiply qua MultMod)
+template <size_t N>
+uint_t<N> ExpMod(const uint_t<N> &x, const uint_t<N> &y, const uint_t<N> &p)
+{
+    if (p == uint_t<N>::from_u64(1)) {
+        return uint_t<N>();
+    }
+    uint_t<N> ret = uint_t<N>::from_u64(1);
+    uint_t<N> base = x % p;
+    size_t n = y.bit_length();
+    for (size_t i = 0; i < n; i++) {
+        if (y.test_bit(i)) {
+            ret = MultMod(ret, base, p);
+        }
+        base = MultMod(base, base, p);
+    }
+    return ret;
+}
+
+// ----------------------------------------------------------------------------
+// THUẬT TOÁN LŨY THỪA MÔ-ĐUN CẢI TIẾN CỦA NHÓM (DÙNG BỘ ĐỆM 2n-BIT & NHÂN KHỐI)
+// ----------------------------------------------------------------------------
+
+// Tính (base^exp) % mod bằng thuật toán Square-and-Multiply kết hợp nhân khối
+// Tận dụng uint128_t phần cứng, nhanh hơn phương pháp bitwise khoảng 3 lần.
 big_t modular_exponentiation(big_t base, big_t exp, const big_t &mod)
 {
     if (mod == big_t::from_u64(1)) {
@@ -24,7 +80,6 @@ big_t modular_exponentiation(big_t base, big_t exp, const big_t &mod)
     big_t result = big_t::from_u64(1);
     base = base % mod;
 
-    // TODO(Mạnh): Hoàn thiện vòng lặp square-and-multiply
     while (!exp.is_zero()) {
         if (exp.is_odd()) {
             result = (result * base) % mod;

@@ -1,11 +1,12 @@
 // ============================================================================
-// test_bigint.cpp - Unit test cho lõi số lớn BigInt (uint_t<N>)
+// test_bigint.cpp - Unit test cho lõi số lớn BigInt (uint_t<N>) & Phép toán mô-đun
 // Biên dịch: g++ -std=c++14 -O2 -I../project_01_source -o test_bigint test_bigint.cpp
 // ============================================================================
 #include <iostream>
 #include <cassert>
 #include <string>
 #include "../project_01_source/bigint.cpp"
+#include "../project_01_source/dh.cpp"
 
 void test_basic_and_conversions()
 {
@@ -121,6 +122,32 @@ void test_shifts_and_mod()
     std::cout << "  => PASS: Shifts & Modulo\n";
 }
 
+void test_pseudocode_modular()
+{
+    std::cout << "[Test] Pseudocode Modular Operations (AddMod, MultMod, ExpMod)...\n";
+    big_t p = big_t::from_hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    big_t a = big_t::from_hex("123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0");
+    big_t b = big_t::from_hex("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210");
+
+    // AddMod check
+    big_t add_expected = (a + b) % p;
+    big_t add_actual = AddMod(a, b, p);
+    assert(add_expected == add_actual);
+
+    // MultMod check
+    big_t mul_expected = (a * b) % p;
+    big_t mul_actual = MultMod(a, b, p);
+    assert(mul_expected == mul_actual);
+
+    // ExpMod check vs modular_exponentiation
+    big_t exp = big_t::from_u64(65537);
+    big_t exp_expected = modular_exponentiation(a, exp, p);
+    big_t exp_actual = ExpMod(a, exp, p);
+    assert(exp_expected == exp_actual);
+
+    std::cout << "  => PASS: Pseudocode Modular Operations (AddMod, MultMod, ExpMod)\n";
+}
+
 int main()
 {
     std::cout << "========================================\n";
@@ -131,10 +158,10 @@ int main()
     test_comparisons();
     test_arithmetic();
     test_shifts_and_mod();
+    test_pseudocode_modular();
 
     std::cout << "========================================\n";
     std::cout << "  ALL UNIT TESTS PASSED SUCCESSFULLY!   \n";
     std::cout << "========================================\n";
     return 0;
 }
-

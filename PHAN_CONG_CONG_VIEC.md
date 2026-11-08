@@ -68,6 +68,14 @@ Thư mục `prng_sample` gồm:
 6. `Makefile` mẫu có `-lntl -lgf2x -lgmp` (NTL/GMP) → **tuyệt đối không dùng** các thư viện này (vi phạm yêu cầu tự cài đặt); Makefile mẫu cũng chưa có `-std=c++14`.
 7. Mẫu chia thành `.h` + `.c` + `.cpp`, nhưng bài nộp **chỉ được chứa `.cpp`** → toàn bộ code phải tổ chức lại theo mục 3 (không còn file header).
 
+### Ghi chú bổ sung: Tài liệu `pseudocode-modular-operation.pdf` (Giảng viên cung cấp thêm)
+Tài liệu hướng dẫn 4 thuật toán mô-đun quan trọng:
+- `mod(x, y)`: Tính $x \% y$ bằng dịch bit và trừ (đã cài đặt trong `divmod` ở `bigint.cpp`).
+- `AddMod(x, y, p)`: Tính $(x + y) \% p$ trong $n$-bit (kiểm tra $x \ge p - y$ để trừ $x - (p - y)$, tránh tràn số $n$-bit).
+- `MultMod(x, y, p)`: Tính $(x \cdot y) \% p$ bằng kỹ thuật Double-and-Add nhị phân kết hợp `AddMod`.
+- `ExpMod(x, y, p)`: Lũy thừa mô-đun Square-and-Multiply dùng `MultMod`.
+*(Toàn bộ 4 thuật toán này đã được Khang hỗ trợ viết sẵn trong `dh.cpp` và kiểm thử tự động trong `tests/test_bigint.cpp` để Mạnh và nhóm tham khảo/đối chiếu).*
+
 ---
 
 ## 3. Kiến trúc chương trình & giao diện thống nhất (API)
@@ -206,7 +214,8 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 **Lập trình**
 - [ ] **Phép chia & mod cho `uint_t<N>`** (khu vực riêng trong `bigint.cpp`): `divmod`, `/`, `%`. Làm trước bản chia nhị phân (shift-subtract) để có kết quả đúng sớm, sau đó tối ưu bằng **Knuth Algorithm D** (chia theo limb 64-bit với `uint128_t`).
   - ⚠️ **Ưu tiên cao:** bản shift-subtract Khang đặt sẵn đo được ≈ 120 µs/phép `mulmod` 512-bit (≈ 90 ms mỗi `modular_exponentiation` 512-bit) — quá chậm để sinh safe prime (cần hàng nghìn lần Miller-Rabin). Knuth D cần nhanh hơn ≥ 10 lần; làm **trước 09/11** vì Minh phụ thuộc vào tốc độ này. Đối chiếu kết quả bằng `tests/crosscheck_bigint.py` (phải giữ 0 sai lệch).
-- [ ] **`modular_exponentiation`**: **square-and-multiply** duyệt bit số mũ, giảm mod sau mỗi phép nhân; xử lý `mod = 1`, `exp = 0`. *(Nâng cao nếu kịp: Montgomery multiplication / sliding window.)*
+- [ ] **`modular_exponentiation`**: **square-and-multiply** duyệt bit số mũ, giảm mod sau mỗi phép nhân; xử lý `mod = 1`, `exp = 0`.
+  - 💡 **Gợi ý từ tài liệu `pseudocode-modular-operation.pdf`:** Có thể đối chiếu giữa thuật toán nhân khối `(base * base) % mod` với thuật toán `ExpMod`/`MultMod`/`AddMod` của thầy (đã có sẵn code tham chiếu trong `dh.cpp`). So sánh hiệu năng hai phương pháp để đưa vào Báo cáo Mục 1 & 4.
 - [ ] **`choose_generator(p)`**: với `p = 2q + 1`, các bậc phần tử chỉ có thể là 1, 2, q, 2q → chọn `g` sao cho `g ≠ ±1` và kiểm tra `g^q mod p` để biết `g` sinh nhóm con bậc `q` (thặng dư bậc hai) hay cả nhóm bậc `2q`; trình bày lựa chọn của nhóm và lý do (vd. dùng nhóm con bậc `q` để tránh rò rỉ 1 bit qua ký hiệu Legendre).
 - [ ] **`main.cpp` – luồng Diffie-Hellman**: seed PRNG → sinh `p`, `g` → khóa riêng `a`, `b` → `A`, `B` → bí mật chung hai phía → in kết quả (hex), xác minh trùng khớp, in thời gian từng bước.
 - [ ] **Kiểm thử** (`tests/`):

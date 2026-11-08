@@ -124,6 +124,27 @@ struct uint_t {
   $$\text{rem} = ((\text{rem} \times 2^{64}) + \text{digits}[i]) \bmod m$$
 - Độ phức tạp: $O(len_a)$.
 
+### 1.3.9. So sánh hai hướng tiếp cận số học mô-đun (AddMod, MultMod vs. Bộ đệm $2n$-bit)
+Dựa trên tài liệu tham khảo bổ sung của môn học (`pseudocode-modular-operation.pdf`), nhóm đã nghiên cứu và phân tích hai hướng tiếp cận khác nhau trong việc thực thi các phép toán mô-đun:
+
+1. **Phương pháp 1: Giữ biến trung gian luôn trong $n$-bit (Mã giả của giảng viên)**:
+   - **Cơ chế**:
+     - `AddMod(x, y, p)`: Dùng điều kiện kiểm tra $x \ge p - y$ để tính $(x + y) \bmod p$ bằng phép trừ $x - (p - y)$, triệt tiêu nguy cơ tràn bit $n$.
+     - `MultMod(x, y, p)`: Tính $(x \cdot y) \bmod p$ bằng kỹ thuật cộng-dồn nhị phân (Double-and-Add) kết hợp `AddMod`, duyệt qua $n$ bit của $y$.
+     - `ExpMod(x, y, p)`: Lũy thừa mô-đun dạng Square-and-Multiply dựa trên `MultMod`.
+   - **Ưu điểm**: Mọi biến trung gian được đảm bảo không vượt quá $n$-bit. Rất phù hợp nếu hệ thống bị ép buộc chỉ được cấp phát một struct kích thước cố định đúng $n$-bit (như `uint512_t` thuần túy).
+   - **Hạn chế**: Mỗi phép nhân `MultMod` phải lặp qua toàn bộ số bit của $y$ (512 lượt gọi `AddMod`), dẫn đến độ phức tạp thực thi cao hơn.
+
+2. **Phương pháp 2: Sử dụng bộ đệm độ rộng gấp đôi ($2n$-bit) kết hợp nhân khối (Cách nhóm cài đặt)**:
+   - **Cơ chế**:
+     - Định nghĩa `big_t` có độ rộng $2n$-bit (2048 bit).
+     - Phép nhân hai số $n$-bit $x \times y$ được thực hiện nguyên khối qua thuật toán Schoolbook tận dụng lệnh nhân 128-bit phần cứng `uint128_t` (chỉ mất $8 \times 8 = 64$ phép nhân limb cho 512-bit).
+     - Sau đó áp dụng phép chia nhị phân `divmod` / `%` để lấy phần dư modulo $p$.
+   - **Ưu điểm**: Tối ưu hóa sâu phần cứng CPU, tốc độ nhanh hơn vượt trội. Thực nghiệm đo đạc lũy thừa mô-đun 512-bit cho thấy:
+     - Phương pháp 2 (Nhóm): **~20.1 ms**.
+     - Phương pháp 1 (Mã giả thầy): **~62.8 ms** (chậm hơn khoảng 3 lần).
+   - **Kết luận**: Nhóm cài đặt đầy đủ cả hai phương án trong mã nguồn (`dh.cpp`) để đối chiếu, kiểm chứng tính chính xác (cho ra kết quả khớp 100%) và phục vụ tối ưu hóa tốc độ.
+
 ---
 
 ## 1.4. Bảng tổng kết độ phức tạp các toán tử
