@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         }
     } else {
         std::cout << "  - PRNG Seed: Ngau nhien tu he dieu hanh (randombytes)\n";
-        // Lay du 32 byte entropy tu OS (Windows: rand_s, Linux/macOS: getrandom)
+        // Lay 32 byte entropy tu OS (Windows: rand_s, Linux/macOS: getrandom) - da port trong prng.cpp
         randombytes(seed, sizeof(seed));
     }
 
@@ -129,11 +129,25 @@ int main(int argc, char *argv[])
     auto t1 = std::chrono::high_resolution_clock::now();
     double time_prime = std::chrono::duration<double>(t1 - t0).count();
     std::cout << "    => Hoan tat trong: " << time_prime << " giay\n";
-    std::cout << "    p = " << p.to_hex() << "\n\n";
+    std::cout << "    p = " << p.to_hex() << "\n";
+    if (p.bit_length() != bit_size || !p.is_odd()) {
+        std::cerr << "Loi: generate_safe_prime tra ve p khong hop le (do dai " << p.bit_length()
+                  << " bit, can " << bit_size << " bit, p phai le). Kiem tra lai prime.cpp.\n";
+        return 1;
+    }
+    std::cout << "    (p co dung " << p.bit_length() << " bit)\n\n";
 
     std::cout << "[2] Chon phan tu sinh g...\n";
     big_t g = choose_generator(p);
-    std::cout << "    g = " << g.to_hex() << "\n\n";
+    big_t q = (p - big_t::from_u64(1)) >> 1; // p = 2q + 1
+    bool g_ok = (g != big_t::from_u64(1)) && (modular_exponentiation(g, q, p) == big_t::from_u64(1));
+    std::cout << "    g = " << g.to_hex() << "\n";
+    std::cout << "    Kiem tra g != 1 va g^q mod p == 1: " << (g_ok ? "DUNG" : "SAI")
+              << " (g sinh nhom con bac nguyen to q = (p-1)/2)\n\n";
+    if (!g_ok) {
+        std::cerr << "Loi: g khong thuoc nhom con bac q. p co the khong phai so nguyen to an toan.\n";
+        return 1;
+    }
 
     // ------------------- 4. Sinh khoa rieng cua Alice & Bob ------------------
     std::cout << "[3] Sinh khoa rieng cho Alice va Bob trong khoang [2, p - 2]...\n";
@@ -144,10 +158,22 @@ int main(int argc, char *argv[])
 
     // ------------------- 5. Tinh gia tri cong khai A va B -------------------
     std::cout << "[4] Tinh gia tri cong khai:\n";
+    auto t_pub0 = std::chrono::high_resolution_clock::now();
     big_t A = modular_exponentiation(g, a, p); // A = g^a mod p
     big_t B = modular_exponentiation(g, b, p); // B = g^b mod p
+    auto t_pub1 = std::chrono::high_resolution_clock::now();
+    double time_pub = std::chrono::duration<double>(t_pub1 - t_pub0).count();
     std::cout << "    Alice gui A = g^a mod p = " << A.to_hex() << "\n";
-    std::cout << "    Bob   gui B = g^b mod p = " << B.to_hex() << "\n\n";
+    std::cout << "    Bob   gui B = g^b mod p = " << B.to_hex() << "\n";
+    std::cout << "    Thoi gian tinh A, B: " << time_pub << " giay\n";
+    // Moi ben kiem tra gia tri cong khai nhan duoc: thuoc [2, p-2] va nam trong nhom con bac q
+    bool pub_ok = is_valid_public_value(A, p) && is_valid_public_value(B, p);
+    std::cout << "    Kiem tra gia tri cong khai hop le (trong [2, p-2] va A^q = B^q = 1): "
+              << (pub_ok ? "DUNG" : "SAI") << "\n\n";
+    if (!pub_ok) {
+        std::cerr << "Loi: gia tri cong khai khong hop le.\n";
+        return 1;
+    }
 
     // ----------------------- 6. Tinh bi mat chung ---------------------------
     std::cout << "[5] Tinh bi mat chung:\n";
@@ -163,7 +189,7 @@ int main(int argc, char *argv[])
 
     // ------------------------- 7. Xac minh ket qua --------------------------
     std::cout << "===============================================================\n";
-    bool matched = (s_alice == s_bob) && (!s_alice.is_zero());
+    bool matched = (s_alice == s_bob) && (s_alice > big_t::from_u64(1)); // loai bi mat 0 / 1
     if (matched) {
         std::cout << "  [XAC MINH THANH CONG] Bi mat chung hai ben hoan toan TRUNG KHOP!\n";
     } else {

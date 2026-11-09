@@ -162,3 +162,81 @@ Dựa trên tài liệu tham khảo bổ sung của môn học (`pseudocode-modu
 | `from_hex`, `to_hex` | Chuyển đổi chuỗi Hex | $O(N)$ | $O(N)$ |
 | `to_dec` | Chuyển đổi chuỗi Dec | $O(N^2)$ | $O(N)$ |
 | `divmod(a, b, q, r)` | Chia & lấy dư hai số lớn | $O(k \cdot N)$ (với $k$ là số bit) | $O(N)$ |
+
+---
+
+## 1.5. Phép chia và lấy dư số lớn (`divmod`, `/`, `%`)
+
+### 1.5.1. Vì sao phép chia là điểm nghẽn
+Mọi phép nhân trong lũy thừa mô-đun đều phải rút gọn `mod p`. Với p 512 bit, một lần sinh số nguyên tố an toàn cần hàng nghìn lần Miller-Rabin, mỗi lần là một lũy thừa mô-đun (~768 phép nhân-mô-đun), nên tốc độ của `%` quyết định tốc độ toàn chương trình.
+
+Phiên bản đầu dùng **chia nhị phân (shift-subtract)**: duyệt từng bit của số bị chia, mỗi bước dịch và so sánh/trừ cả số lớn, độ phức tạp $O(k \cdot N)$ với $k$ là số bit của số bị chia. Đo thực tế: **72 µs** cho một phép `mulmod` 512 bit.
+
+### 1.5.2. Thuật toán Knuth D (TAOCP tập 2, mục 4.3.1)
+Thay vì xử lý từng bit, Knuth D tính **mỗi lần một limb 64-bit của thương**, giống phép chia dài ở tiểu học nhưng trong hệ cơ số $b = 2^{64}$.
+
+Gọi số bị chia $u$ có $m$ limb, số chia $v$ có $n$ limb (bỏ các limb cao bằng 0):
+
+1. **Chuẩn hóa (D1).** Dịch trái cả $u$ và $v$ đi $s = \text{clz}(v_{n-1})$ bit để bit cao nhất của $v_{n-1}$ bằng 1. Điều kiện $v_{n-1} \ge 2^{63}$ bảo đảm ước lượng ở bước sau lệch tối đa 2 đơn vị.
+2. **Với mỗi $j = m-n, \dots, 0$ (D2–D7):**
+   - **Ước lượng (D3):** $\hat q = \lfloor (u_{j+n}\cdot 2^{64} + u_{j+n-1}) / v_{n-1} \rfloor$ dùng `uint128_t`.
+   - **Hiệu chỉnh:** trong khi $\hat q \ge 2^{64}$ hoặc $\hat q \cdot v_{n-2} > \hat r \cdot 2^{64} + u_{j+n-2}$ thì giảm $\hat q$ đi 1 (lặp tối đa 2 lần). Bước này loại gần như mọi ước lượng thừa.
+   - **Nhân-trừ (D4):** $u_{j..j+n} \leftarrow u_{j..j+n} - \hat q \cdot v$, dùng cờ mượn.
+   - **Cộng bù (D5–D6):** nếu kết quả âm (xác suất khoảng $2/2^{64}$ với dữ liệu ngẫu nhiên) thì $\hat q \leftarrow \hat q - 1$ và cộng lại $v$.
+   - Gán $q_j = \hat q$.
+3. **Khử chuẩn hóa (D8):** phần dư $r = (u_{0..n-1}) \gg s$.
+
+Trường hợp số chia chỉ có 1 limb ($n = 1$) dùng đường ngắn: chia tuần tự từ limb cao xuống thấp bằng `uint128_t`.
+
+### 1.5.3. Độ phức tạp và kết quả đo
+Số vòng ngoài là $m - n + 1$, mỗi vòng $O(n)$ nên tổng là $O(n(m-n+1))$ phép nhân 64×64→128. Trong `modular_exponentiation`, số bị chia là tích $2n$ limb và số chia $n$ limb nên mỗi phép `%` tốn $O(n^2)$, tương đương một phép nhân.
+
+| Phép đo (g++ -O2) | Chia nhị phân | Knuth D |
+|---|:---:|:---:|
+| `mulmod` 512 bit | 72 µs | 0,44 µs |
+| `modular_exponentiation`, mũ 512 bit | ~55 ms | 0,24 ms |
+| `modular_exponentiation`, mũ 768 bit | – | 0,63 ms |
+| `modular_exponentiation`, mũ 1024 bit | – | 1,17 ms |
+
+Nhanh hơn khoảng **160 lần**, vượt xa mục tiêu ≥ 10 lần của nhóm.
+
+Cập nhật bảng 1.4: `divmod(a, b, q, r)` — Chia & lấy dư — $O(n(m-n+1))$ — bộ nhớ phụ $O(N)$.
+
+### 1.5.4. Kiểm thử tính đúng đắn
+- `tests/crosscheck_bigint.py`: 30.000 phép tính ngẫu nhiên đối chiếu với số nguyên Python, **0 sai lệch**.
+- `tests/crosscheck_div_stress.py`: 50.016 phép chia/mod với các số "khó" (limb toàn 0, $2^{63}$, $2^{64}-1$, …). Đo bằng bộ đếm tạm, bộ test này đi qua nhánh **cộng bù 3.242 lần** và nhánh hiệu chỉnh $\hat q$ 53.062 lần, **0 sai lệch**. (Test ngẫu nhiên thường gần như không bao giờ chạm nhánh cộng bù nên cần bộ test riêng này.)
+
+---
+
+## 1.6. Lũy thừa mô-đun (`modular_exponentiation`)
+
+### 1.6.1. Bài toán
+Tính $r = b^e \bmod m$ với $e$ cỡ 512 bit. Nhân $e$ lần là bất khả thi ($e \approx 2^{512}$).
+
+### 1.6.2. Square-and-Multiply
+Viết $e = \sum_{i=0}^{k-1} e_i 2^i$ ($e_i \in \{0,1\}$, $k$ = số bit). Duyệt bit từ cao xuống thấp:
+
+```
+result = 1
+for i = k-1 down to 0:
+    result = result * result mod m          # bình phương
+    if e_i == 1: result = result * b mod m  # nhân
+```
+
+Ví dụ $3^{13} \bmod 7$: $13 = 1101_2$. Khởi tạo $1$; bit 1: $1^2 \cdot 3 = 3$; bit 1: $3^2 \cdot 3 = 27 \equiv 6$; bit 0: $6^2 = 36 \equiv 1$; bit 1: $1^2 \cdot 3 = 3$. Kết quả $3$ (đúng: $3^{13} = 1594323 = 7 \cdot 227760 + 3$).
+
+### 1.6.3. Vì sao hiệu quả với số lớn
+- **Số phép nhân:** $k$ phép bình phương và trung bình $k/2$ phép nhân, tức $\approx 1{,}5k$ phép `mulmod` (~768 với $k = 512$) thay vì $2^{512}$.
+- **Kích thước bị chặn:** rút gọn `mod m` ngay sau mỗi phép nhân nên mọi giá trị trung gian $< m$ và tích $< m^2$, vừa trong `big_t` (rộng gấp đôi `MAX_PRIME_BITS`, xem mục 1.1). Không bao giờ phải lưu số $b^e$ khổng lồ.
+- **Tổng độ phức tạp:** $O(k \cdot M(n))$ với $M(n) = O(n^2)$ là chi phí một phép nhân + chia $n$ limb. Với 512 bit: $O(512 \cdot 8^2)$ phép nhân limb.
+
+### 1.6.4. Trường hợp biên đã xử lý
+`mod = 1 → 0`; `mod = 0 → 0` (không xác định, tránh chia 0); `exp = 0 → 1`; `base ≥ mod` được rút gọn trước; `base = 0`.
+
+### 1.6.5. Kiểm thử
+`tests/crosscheck_modexp.py` đối chiếu 4.452 ca (ngẫu nhiên với modulus 8–1024 bit, ca biên, định lý Fermat nhỏ trên $2^{521}-1$) với hàm `pow(b, e, m)` của Python: **0 sai lệch**. Có thể nâng cấp nếu còn thời gian: nhân Montgomery (tránh phép chia) hoặc cửa sổ trượt (giảm số phép nhân còn $\approx k(1 + 1/(w+1))$).
+
+### Tài liệu tham khảo (phần bổ sung)
+- D. E. Knuth, *The Art of Computer Programming, Vol. 2: Seminumerical Algorithms*, mục 4.3.1, Algorithm D.
+- H. S. Warren, *Hacker's Delight*, chương 9 (chia số nhiều từ, `divmnu`).
+- A. Menezes, P. van Oorschot, S. Vanstone, *Handbook of Applied Cryptography*, mục 14.6 (lũy thừa) và 14.2.4 (chia).
