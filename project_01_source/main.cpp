@@ -115,21 +115,8 @@ int main(int argc, char *argv[])
         }
     } else {
         std::cout << "  - PRNG Seed: Ngau nhien tu he dieu hanh (randombytes)\n";
-        // Lay 32 byte entropy tu OS
-        // Luu y: tren Windows, can dam bao randombytes() da duoc port bang rand_s()
-        #ifdef _WIN32
-        // Tam thoi khoi tao seed bang rand_s neu randombytes chua hoan thien
-        for (size_t i = 0; i < sizeof(seed); i += sizeof(unsigned int)) {
-            unsigned int r = 0;
-            if (rand_s(&r) != 0) {
-                std::cerr << "Loi: rand_s() that bai, khong lay duoc entropy tu he dieu hanh.\n";
-                return 1;
-            }
-            std::memcpy(seed + i, &r, sizeof(r));
-        }
-        #else
+        // Lay du 32 byte entropy tu OS (Windows: rand_s, Linux/macOS: getrandom)
         randombytes(seed, sizeof(seed));
-        #endif
     }
 
     prng_seed(&ctx, seed, sizeof(seed));
