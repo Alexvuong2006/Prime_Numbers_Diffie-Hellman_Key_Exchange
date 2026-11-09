@@ -9,6 +9,7 @@ Phụ trách chính: **Tạ Quang Mạnh (24120089)**. Phần kiểm thử `BigI
 | File | Mô tả | Trạng thái |
 |---|---|:---:|
 | `test_bigint.cpp` | Unit test `BigInt`: chuyển đổi hex/dec, so sánh, `+ - *`, dịch bit, `mod_small`, chia/mod | ✅ |
+| `test_prng_prime.cpp` | Unit test PRNG, random_bits, random_range & Miller-Rabin (Minh - Mốc 09/11) | ✅ |
 | `crosscheck_bigint.cpp` | Chương trình C++ đọc lệnh từ stdin (`add/sub/mul/div/mod/shl/shr/dec/bl/msm`) và in kết quả; cuối chương trình đo tốc độ `mulmod` 512-bit | ✅ |
 | `crosscheck_bigint.py` | Script sinh 30.000 phép tính ngẫu nhiên, chạy `crosscheck_bigint` rồi đối chiếu với số nguyên Python. Python **chỉ làm đáp án chuẩn**, không thuộc chương trình nộp | ✅ |
 

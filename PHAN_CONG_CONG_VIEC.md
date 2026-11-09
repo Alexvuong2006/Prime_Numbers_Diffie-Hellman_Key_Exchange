@@ -193,13 +193,13 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 **Mảng chính: PRNG + Kiểm tra nguyên tố + Sinh số nguyên tố an toàn + Sinh khóa riêng (Nhiệm vụ B, C)**
 
 **Lập trình**
-- [ ] **Hoàn thiện PRNG từ mẫu**: gộp `fips202.h` + `fips202.c` → `fips202.cpp`, `prng.h` + `prng.cpp` → `prng.cpp` (không còn header); sửa các lỗi 1–4 ở mục 2 (port `randombytes` sang Windows bằng `rand_s`, `outlen` → `size_t`, ép kiểu trước khi dịch bit, khởi tạo seed đủ 32 byte từ `randombytes`).
-- [ ] **`random_bits(ctx, bits)`**: ghép các `prng_next_u64` thành số đúng `bits` bit (bật bit cao nhất; với ứng viên nguyên tố bật thêm bit thấp nhất).
-- [ ] **`random_range(ctx, lo, hi)`**: **rejection sampling** để phân phối đều (không dùng `% n` gây lệch).
-- [ ] **`is_probable_prime` (Miller-Rabin)**: `n-1 = 2^s · d`, cơ sở ngẫu nhiên trong `[2, n-2]`, số vòng cấu hình được (mặc định 40); xử lý `n < 4`, số chẵn. Viết & test trước trên `uint64_t` trong lúc chờ phép chia số lớn.
+- [x] **Hoàn thiện PRNG từ mẫu** (PR #2): port `randombytes` sang Windows bằng `rand_s`, `outlen` → `size_t`, ép kiểu trước khi dịch bit để tránh UB C++14, khởi tạo seed đủ 32 byte từ `randombytes`.
+- [x] **`random_bits(ctx, bits)`** (PR #2): sinh số ngẫu nhiên đúng `bits` bit (bit cao nhất luôn bật = 1).
+- [x] **`random_range(ctx, lo, hi)`** (PR #2): **rejection sampling** để phân phối đều (loại bỏ hoàn toàn modulo bias).
+- [x] **`is_probable_prime` (Miller-Rabin)** (PR #2): cài đặt trên cả `uint64_t` và `big_t` ($n - 1 = 2^s \cdot d$, cơ sở ngẫu nhiên, số vòng mặc định 40); vượt qua kiểm thử với các số Carmichael nổi tiếng và số Mersenne $2^{127}-1$.
+- [x] **`generate_private_key(ctx, p)`** (PR #2): `random_range(ctx, 2, p-2)`.
 - [ ] **Sàng sơ bộ** bằng các số nguyên tố nhỏ (vd. < 2000, dùng `mod_small`) để loại nhanh ứng viên.
-- [ ] **`generate_safe_prime(ctx, bitsize)`**: sinh `q` (`bitsize-1` bit) → kiểm tra `q` và `p = 2q + 1` cùng nguyên tố; tối ưu: sàng đồng thời cho `q` và `p` (loại `q` nếu `q ≡ 0` hoặc `q ≡ (r-1)/2 mod r`), chạy 1 vòng Miller-Rabin/Fermat cơ sở 2 trước rồi mới chạy đủ số vòng.
-- [ ] **`generate_private_key(ctx, p)`**: `random_range(ctx, 2, p-2)`.
+- [ ] **`generate_safe_prime(ctx, bitsize)`**: sinh `q` (`bitsize-1` bit) → kiểm tra `q` và `p = 2q + 1` cùng nguyên tố; tối ưu: sàng đồng thời cho `q` và `p` (loại `q` nếu `q ≡ 0` hoặc `q ≡ (r-1)/2 mod r`), chạy 1 vòng Miller-Rabin/Fermat cơ sở 2 trước rồi mới chạy đủ số vòng (Mốc 2: 10/11 - 12/11).
 - [ ] Benchmark sinh safe prime 512 / 768 / 1024 bit (số ứng viên đã thử, thời gian trung bình) – gửi số liệu cho Khang.
 
 **Báo cáo**
