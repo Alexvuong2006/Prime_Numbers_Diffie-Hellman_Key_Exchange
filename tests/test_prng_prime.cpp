@@ -123,15 +123,54 @@ void test_miller_rabin_u64_and_big()
     std::cout << "  => PASS: Miller-Rabin (uint64_t & big_t)\n";
 }
 
+void test_generate_safe_prime_and_dh()
+{
+    std::cout << "[Test 4] generate_safe_prime (sieve + base-2 + Miller-Rabin) & DH...\n";
+    prng_ctx ctx;
+    uint8_t seed[32] = {0x18, 0x24, 0x12, 0x00, 0x91};
+    prng_seed(&ctx, seed, sizeof(seed));
+
+    // Kiểm tra sinh safe prime 64-bit, 128-bit và 512-bit
+    size_t sizes[] = {64, 128, 512};
+    for (size_t bits : sizes) {
+        big_t p = generate_safe_prime(&ctx, bits, 40);
+        assert(p.bit_length() == bits);
+        assert(p.is_odd());
+
+        big_t q = (p - big_t::from_u64(1)) >> 1;
+        assert(q.bit_length() == bits - 1);
+        assert(is_probable_prime(&ctx, q, 40));
+        assert(is_probable_prime(&ctx, p, 40));
+
+        // Kiểm tra toàn trình Diffie-Hellman trên safe prime vừa sinh
+        big_t g = choose_generator(p);
+        big_t a = generate_private_key(&ctx, p);
+        big_t b = generate_private_key(&ctx, p);
+        big_t A = modular_exponentiation(g, a, p);
+        big_t B = modular_exponentiation(g, b, p);
+        assert(is_valid_public_value(A, p) && is_valid_public_value(B, p));
+        big_t s_a = modular_exponentiation(B, a, p);
+        big_t s_b = modular_exponentiation(A, b, p);
+        assert(s_a == s_b && s_a > big_t::from_u64(1));
+
+        std::cout << "  - Safe prime " << bits << "-bit OK (candidates tried: "
+                  << g_last_safe_prime_stats.total_candidates
+                  << ", passed sieve: " << g_last_safe_prime_stats.passed_sieve
+                  << ", passed q base-2: " << g_last_safe_prime_stats.passed_q_base2 << ")\n";
+    }
+    std::cout << "  => PASS: generate_safe_prime & end-to-end DH\n";
+}
+
 int main()
 {
     std::cout << "========================================================\n";
-    std::cout << "  RUNNING UNIT TESTS FOR PRNG & PRIME (MOC 09/11 - MINH)\n";
+    std::cout << "  RUNNING UNIT TESTS FOR PRNG & PRIME (MINH - 24120091) \n";
     std::cout << "========================================================\n";
 
     test_prng_determinism_and_entropy();
     test_random_bits_and_range();
     test_miller_rabin_u64_and_big();
+    test_generate_safe_prime_and_dh();
 
     std::cout << "========================================================\n";
     std::cout << "  ALL PRNG & PRIME TESTS PASSED SUCCESSFULLY!           \n";

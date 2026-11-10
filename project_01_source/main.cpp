@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
     // ------------------- 3. Sinh so nguyen to an toan p va g -----------------
     std::cout << "[1] Dang sinh so nguyen to an toan p (" << bit_size << " bit)...\n";
     auto t0 = std::chrono::high_resolution_clock::now();
-    big_t p = generate_safe_prime(&ctx, bit_size);
+    big_t p = generate_safe_prime(&ctx, bit_size, rounds);
     auto t1 = std::chrono::high_resolution_clock::now();
     double time_prime = std::chrono::duration<double>(t1 - t0).count();
     std::cout << "    => Hoan tat trong: " << time_prime << " giay\n";
