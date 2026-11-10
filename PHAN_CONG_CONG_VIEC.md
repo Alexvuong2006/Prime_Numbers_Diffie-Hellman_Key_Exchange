@@ -198,13 +198,14 @@ g++ -std=c++14 -O2 -Wall -Wextra -o dh main.cpp
 - [x] **`random_range(ctx, lo, hi)`** (PR #2): **rejection sampling** để phân phối đều (loại bỏ hoàn toàn modulo bias).
 - [x] **`is_probable_prime` (Miller-Rabin)** (PR #2): cài đặt trên cả `uint64_t` và `big_t` ($n - 1 = 2^s \cdot d$, cơ sở ngẫu nhiên, số vòng mặc định 40); vượt qua kiểm thử với các số Carmichael nổi tiếng và số Mersenne $2^{127}-1$.
 - [x] **`generate_private_key(ctx, p)`** (PR #2): `random_range(ctx, 2, p-2)`.
-- [ ] **Sàng sơ bộ** bằng các số nguyên tố nhỏ (vd. < 2000, dùng `mod_small`) để loại nhanh ứng viên.
-- [ ] **`generate_safe_prime(ctx, bitsize)`**: sinh `q` (`bitsize-1` bit) → kiểm tra `q` và `p = 2q + 1` cùng nguyên tố; tối ưu: sàng đồng thời cho `q` và `p` (loại `q` nếu `q ≡ 0` hoặc `q ≡ (r-1)/2 mod r`), chạy 1 vòng Miller-Rabin/Fermat cơ sở 2 trước rồi mới chạy đủ số vòng (Mốc 2: 10/11 - 12/11).
-- [ ] Benchmark sinh safe prime 512 / 768 / 1024 bit (số ứng viên đã thử, thời gian trung bình) – gửi số liệu cho Khang.
+- [x] **Sàng sơ bộ** bằng 302 số nguyên tố lẻ nhỏ (< 2000, dùng `mod_small`) để loại nhanh ~98,56% ứng viên hợp số.
+- [x] **`generate_safe_prime(ctx, bitsize)`**: sinh `q` (`bitsize-1` bit) → kiểm tra `q` và `p = 2q + 1` cùng nguyên tố; tối ưu 4 tầng: sàng đồng thời cho `q` và `p` (loại `q` nếu `q ≡ 0` hoặc `q ≡ (r-1)/2 mod r`), chạy 1 vòng Miller-Rabin cơ sở 2 trên `q` và `p` trước rồi mới chạy đủ 40 vòng Miller-Rabin cơ sở ngẫu nhiên.
+- [x] Benchmark sinh safe prime 512 / 768 / 1024 bit (`tests/bench_safe_prime.cpp`: 512-bit ~0,26s; 768-bit ~1,32s; 1024-bit ~1,58s) – đã cập nhật đầy đủ số liệu vào báo cáo Mục 2.
 
 **Báo cáo**
-- [ ] **Mục 2 – Kiểm tra số nguyên tố**: chia thử, Fermat (số Carmichael), Miller-Rabin (cơ sở lý thuyết, xác suất sai ≤ 4^(-k)), Solovay-Strassen, AKS (giới thiệu); safe prime/Sophie Germain prime và lý do dùng trong DH; mô tả cài đặt của nhóm.
-- [ ] **Mục 3 – Số ngẫu nhiên (điểm cộng)**: TRNG/PRNG/CSPRNG; nguồn entropy của OS (`getrandom`, `rand_s`/`RtlGenRandom`, `BCryptGenRandom`); **SHAKE128/Keccak sponge – vì sao một XOF dùng được làm CSPRNG** (theo thư viện mẫu); vai trò của seed và vì sao seed cố định chỉ dùng để debug; sự cố thực tế do ngẫu nhiên yếu (vd. Debian OpenSSL 2008); vì sao không dùng `rand()`/`std::mt19937`.
+- [x] **Mục 2 – Kiểm tra số nguyên tố** (`docs/muc2_kiem_tra_so_nguyen_to.md`): chia thử, Fermat (số Carmichael), Miller-Rabin (cơ sở lý thuyết, xác suất sai ≤ 4^(-k)), Solovay-Strassen, AKS (giới thiệu); safe prime/Sophie Germain prime và lý do dùng trong DH; mô tả cài đặt 4 tầng và bảng kết quả benchmark của nhóm.
+- [x] **Mục 3 – Số ngẫu nhiên (điểm cộng)** (`docs/muc3_so_ngau_nhien.md`): TRNG/PRNG/CSPRNG; nguồn entropy của OS (`getrandom`, `rand_s`/`RtlGenRandom`, `BCryptGenRandom`); **SHAKE128/Keccak sponge – vì sao một XOF dùng được làm CSPRNG**; Rejection Sampling vs Modulo Bias; vai trò của seed và vì sao seed cố định chỉ dùng để debug; sự cố thực tế do ngẫu nhiên yếu (Debian OpenSSL 2008 CVE-2008-0166, Mining Your Ps and Qs, Dual_EC_DRBG); vì sao không dùng `rand()`/`std::mt19937`.
+- [x] **Mục 6 – Tự đánh giá phần Minh** (`docs/muc6_tu_danh_gia.md`): ưu điểm, hạn chế tồn đọng và hướng cải thiện cho phần PRNG, Miller-Rabin & sinh Safe Prime.
 
 ---
 
